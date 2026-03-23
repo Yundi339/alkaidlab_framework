@@ -125,6 +125,8 @@ CMAKE_ARGS=(
     -B "$BUILD_DIR" -S "$FW_DIR"
     -DCMAKE_TOOLCHAIN_FILE="$VCPKG_TOOLCHAIN"
     -DVCPKG_INSTALLED_DIR="$VCPKG_INSTALLED"
+    -DVCPKG_INSTALL_OPTIONS="--no-print-usage"
+    --log-level=NOTICE
     -DLIBHV_INCLUDE_DIR="$LIBHV_INSTALL/include"
     -DLIBHV_LIB="$LIBHV_LIB"
     -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR"
@@ -138,7 +140,18 @@ if $RUN_TESTS; then
     fi
 fi
 
-cmake "${CMAKE_ARGS[@]}" 2>&1
+# 增量构建：CMakeCache 存在且 install prefix 匹配时跳过 configure
+NEED_CONFIGURE=true
+if [[ -f "$BUILD_DIR/CMakeCache.txt" ]] && ! $DO_CLEAN; then
+    CACHED_PREFIX=$(grep 'CMAKE_INSTALL_PREFIX:PATH=' "$BUILD_DIR/CMakeCache.txt" 2>/dev/null | cut -d= -f2)
+    if [[ "$CACHED_PREFIX" = "$INSTALL_DIR" ]]; then
+        NEED_CONFIGURE=false
+    fi
+fi
+
+if $NEED_CONFIGURE; then
+    cmake "${CMAKE_ARGS[@]}" 2>&1
+fi
 
 NPROC=$(nproc 2>/dev/null || echo 4)
 cmake --build "$BUILD_DIR" -j"$NPROC" 2>&1
