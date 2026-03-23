@@ -58,7 +58,20 @@ target_include_directories(alkaidlab_fw PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-# libhv（由父项目或使用方提供）
+# libhv（优先使用外部传入，否则从 build_cache 获取）
+if(NOT LIBHV_INCLUDE_DIR)
+    set(LIBHV_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build_cache/libhv_install/include")
+endif()
+if(NOT LIBHV_LIB)
+    foreach(_candidate
+        "${CMAKE_CURRENT_SOURCE_DIR}/build_cache/libhv_install/lib/libhv_static.a"
+        "${CMAKE_CURRENT_SOURCE_DIR}/build_cache/libhv_install/lib/libhv.a")
+        if(EXISTS "${_candidate}")
+            set(LIBHV_LIB "${_candidate}")
+            break()
+        endif()
+    endforeach()
+endif()
 if(LIBHV_INCLUDE_DIR)
     target_include_directories(alkaidlab_fw PRIVATE ${LIBHV_INCLUDE_DIR})
 endif()
