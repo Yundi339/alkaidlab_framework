@@ -4,7 +4,8 @@
 # ============================================================================
 # 用法：
 #   ./build.sh                                    # 独立构建（自动 clone vcpkg）
-#   ./build.sh --vcpkg-root /path/to/vcpkg        # 复用已有 vcpkg（主仓库调用）
+#   ./build.sh --vcpkg-root /path/to/vcpkg        # 复用已有 vcpkg
+#   ./build.sh --vcpkg-installed-dir /path/to/dir   # 指定 vcpkg_installed 目录
 #   ./build.sh --install-dir /path/to/out         # 指定安装目录
 #   ./build.sh --test                             # 构建 + 测试
 #   ./build.sh --clean                            # 清空重建
@@ -27,17 +28,19 @@ LIBHV_INSTALL="$FW_DIR/build_cache/libhv_install"
 # 默认值
 INSTALL_DIR=""
 VCPKG_ROOT_OVERRIDE=""
+VCPKG_INSTALLED_OVERRIDE=""
 RUN_TESTS=false
 DO_CLEAN=false
 
 # 解析参数
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --install-dir)   INSTALL_DIR="$2"; shift 2 ;;
-        --vcpkg-root)    VCPKG_ROOT_OVERRIDE="$2"; shift 2 ;;
-        --test)          RUN_TESTS=true; shift ;;
-        --clean)         DO_CLEAN=true; shift ;;
-        *)               echo "未知选项: $1"; exit 1 ;;
+        --install-dir)          INSTALL_DIR="$2"; shift 2 ;;
+        --vcpkg-root)           VCPKG_ROOT_OVERRIDE="$2"; shift 2 ;;
+        --vcpkg-installed-dir)  VCPKG_INSTALLED_OVERRIDE="$2"; shift 2 ;;
+        --test)                 RUN_TESTS=true; shift ;;
+        --clean)                DO_CLEAN=true; shift ;;
+        *)                      echo "未知选项: $1"; exit 1 ;;
     esac
 done
 
@@ -69,8 +72,12 @@ else
 fi
 VCPKG_TOOLCHAIN="$VCPKG_DIR/scripts/buildsystems/vcpkg.cmake"
 
-# 安装 fw 的 vcpkg 依赖（从 fw 目录的 vcpkg.json 读取）
-VCPKG_INSTALLED="$BUILD_DIR/vcpkg_installed"
+# vcpkg_installed 目录
+if [[ -n "$VCPKG_INSTALLED_OVERRIDE" ]]; then
+    VCPKG_INSTALLED="$VCPKG_INSTALLED_OVERRIDE"
+else
+    VCPKG_INSTALLED="$BUILD_DIR/vcpkg_installed"
+fi
 OPENSSL_ROOT="$VCPKG_INSTALLED/x64-linux"
 
 if [[ ! -f "$OPENSSL_ROOT/lib/libssl.a" ]]; then
