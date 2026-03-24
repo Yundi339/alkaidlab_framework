@@ -44,7 +44,7 @@ void LegacyTransfer::send(Context& c, const TransferParams& params) {
     int64_t sendLen   = isRange ? (params.rangeEnd - params.rangeStart + 1)
                                 : params.fileSize;
     bool success = false;
-    m_stats.recordStart(sendLen);
+    auto startTime = m_stats.recordStart(sendLen);
 
     /* ── Headers ── */
     c.setHeader("Content-Disposition",
@@ -77,7 +77,7 @@ void LegacyTransfer::send(Context& c, const TransferParams& params) {
             c.setContentTypeByFilename(params.displayName.c_str());
             success = true;
         }
-        m_stats.recordEnd(success);
+        m_stats.recordEnd(success, startTime);
         if (params.onComplete) params.onComplete(success);
         return;
     }
@@ -95,7 +95,7 @@ void LegacyTransfer::send(Context& c, const TransferParams& params) {
             c.serveFile(params.physicalPath.c_str());
             c.setContentTypeByFilename(params.displayName.c_str());
         }
-        m_stats.recordEnd(true);
+        m_stats.recordEnd(true, startTime);
         if (params.onComplete) params.onComplete(true);
         return;
     }
@@ -103,13 +103,13 @@ void LegacyTransfer::send(Context& c, const TransferParams& params) {
     std::ifstream ifs(params.physicalPath.c_str(), std::ios::binary);
     if (!ifs) {
         c.error(HttpStatus::InternalError, "internal");
-        m_stats.recordEnd(false);
+        m_stats.recordEnd(false, startTime);
         if (params.onComplete) params.onComplete(false);
         return;
     }
     if (isRange && !ifs.seekg(sendStart)) {
         c.error(HttpStatus::InternalError, "internal");
-        m_stats.recordEnd(false);
+        m_stats.recordEnd(false, startTime);
         if (params.onComplete) params.onComplete(false);
         return;
     }
@@ -150,7 +150,7 @@ void LegacyTransfer::send(Context& c, const TransferParams& params) {
     }
     c.end();
     success = (remaining == 0 && !timedOut);
-    m_stats.recordEnd(success);
+    m_stats.recordEnd(success, startTime);
     if (params.onComplete) params.onComplete(success);
 }
 

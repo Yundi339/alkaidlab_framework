@@ -27,8 +27,8 @@ void AccelTransfer::send(Context& c, const TransferParams& params) {
     /* nginx 传输结果未知，假设成功 */
     bool isRange = (params.rangeStart >= 0 && params.rangeEnd >= 0);
     int64_t sendLen = isRange ? (params.rangeEnd - params.rangeStart + 1) : params.fileSize;
-    m_stats.recordStart(sendLen);
-    m_stats.recordEnd(true);
+    auto startTime = m_stats.recordStart(sendLen);
+    m_stats.recordEnd(true, startTime);
     if (params.onComplete) params.onComplete(true);
 }
 

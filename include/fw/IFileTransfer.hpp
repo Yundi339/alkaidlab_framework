@@ -6,6 +6,7 @@
 #include <memory>
 #include <boost/function.hpp>
 #include <boost/atomic.hpp>
+#include <boost/chrono.hpp>
 
 namespace alkaidlab {
 namespace fw {
@@ -14,21 +15,29 @@ class Context;
 
 /** 传输统计（所有策略共享，原子操作线程安全） */
 struct TransferStats {
-    boost::atomic<int64_t> totalCount;     // 累计传输次数
-    boost::atomic<int64_t> totalBytes;     // 累计传输字节数
-    boost::atomic<int64_t> activeCount;    // 当前活跃传输数
-    boost::atomic<int64_t> errorCount;     // 累计错误次数
+    boost::atomic<int64_t> totalCount;       // 累计传输次数
+    boost::atomic<int64_t> totalBytes;       // 累计传输字节数
+    boost::atomic<int64_t> activeCount;      // 当前活跃传输数
+    boost::atomic<int64_t> errorCount;       // 累计错误次数
+    boost::atomic<int64_t> totalDurationMs;  // 累计传输耗时（毫秒）
 
-    TransferStats() : totalCount(0), totalBytes(0), activeCount(0), errorCount(0) {}
+    TransferStats()
+        : totalCount(0), totalBytes(0), activeCount(0)
+        , errorCount(0), totalDurationMs(0) {}
 
-    void recordStart(int64_t bytes) {
+    /** 记录传输开始，返回时间戳用于 recordEnd */
+    boost::chrono::steady_clock::time_point recordStart(int64_t bytes) {
         ++totalCount;
         totalBytes.fetch_add(bytes);
         ++activeCount;
+        return boost::chrono::steady_clock::now();
     }
-    void recordEnd(bool success) {
+    void recordEnd(bool success, const boost::chrono::steady_clock::time_point& startTime) {
         --activeCount;
         if (!success) ++errorCount;
+        int64_t ms = boost::chrono::duration_cast<boost::chrono::milliseconds>(
+            boost::chrono::steady_clock::now() - startTime).count();
+        totalDurationMs.fetch_add(ms);
     }
 };
 

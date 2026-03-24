@@ -26,13 +26,14 @@ struct TransferState {
     std::shared_ptr<void> ownership;     // 共享所有权，保持 writer 存活
     boost::function<void(bool)> onComplete;
     TransferStats* stats;
+    boost::chrono::steady_clock::time_point startTime;
     bool finished;
 
     TransferState() : remaining(0), writer(0), stats(0), finished(false) {}
     ~TransferState() {
         // 安全网：异常析构时确保回调被调用
         if (!finished) {
-            if (stats) stats->recordEnd(false);
+            if (stats) stats->recordEnd(false, startTime);
             if (onComplete) onComplete(false);
         }
     }
@@ -62,7 +63,7 @@ void finish(std::shared_ptr<TransferState>& s, bool success) {
     s->finished = true;
     s->file.close();
     s->writer->onwrite = nullptr;  // 打破循环引用
-    if (s->stats) s->stats->recordEnd(success);
+    if (s->stats) s->stats->recordEnd(success, s->startTime);
     if (s->onComplete) s->onComplete(success);
 }
 
@@ -135,7 +136,7 @@ void StreamTransfer::send(Context& c, const TransferParams& params) {
     state->onComplete  = params.onComplete;
     state->stats       = &m_stats;
 
-    m_stats.recordStart(sendLen);
+    state->startTime = m_stats.recordStart(sendLen);
 
     /* 设置响应头（Context 仍存活） */
     c.setHeader("Content-Disposition",

@@ -2,11 +2,83 @@
 #include "fw/Context.hpp"
 #include <gtest/gtest.h>
 #include <hv/HttpMessage.h>
+#include <boost/thread.hpp>
 #include <fstream>
 #include <string>
 
 namespace alkaidlab {
 namespace fw {
+
+/* ── TransferStats ─────────────────────────────────── */
+
+TEST(TransferStats, InitialValuesAreZero) {
+    TransferStats ts;
+    EXPECT_EQ(ts.totalCount.load(), 0);
+    EXPECT_EQ(ts.totalBytes.load(), 0);
+    EXPECT_EQ(ts.activeCount.load(), 0);
+    EXPECT_EQ(ts.errorCount.load(), 0);
+    EXPECT_EQ(ts.totalDurationMs.load(), 0);
+}
+
+TEST(TransferStats, RecordStartIncrementsCounters) {
+    TransferStats ts;
+    auto t1 = ts.recordStart(1024);
+    EXPECT_EQ(ts.totalCount.load(), 1);
+    EXPECT_EQ(ts.totalBytes.load(), 1024);
+    EXPECT_EQ(ts.activeCount.load(), 1);
+    (void)t1;
+
+    auto t2 = ts.recordStart(2048);
+    EXPECT_EQ(ts.totalCount.load(), 2);
+    EXPECT_EQ(ts.totalBytes.load(), 3072);
+    EXPECT_EQ(ts.activeCount.load(), 2);
+    (void)t2;
+}
+
+TEST(TransferStats, RecordEndSuccess) {
+    TransferStats ts;
+    auto start = ts.recordStart(100);
+    ts.recordEnd(true, start);
+    EXPECT_EQ(ts.activeCount.load(), 0);
+    EXPECT_EQ(ts.errorCount.load(), 0);
+    EXPECT_GE(ts.totalDurationMs.load(), 0);
+}
+
+TEST(TransferStats, RecordEndFailure) {
+    TransferStats ts;
+    auto start = ts.recordStart(100);
+    ts.recordEnd(false, start);
+    EXPECT_EQ(ts.activeCount.load(), 0);
+    EXPECT_EQ(ts.errorCount.load(), 1);
+}
+
+TEST(TransferStats, DurationAccumulates) {
+    TransferStats ts;
+    auto s1 = ts.recordStart(100);
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(20));
+    ts.recordEnd(true, s1);
+
+    auto s2 = ts.recordStart(200);
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(20));
+    ts.recordEnd(true, s2);
+
+    EXPECT_GE(ts.totalDurationMs.load(), 30);  // 容忍调度抖动
+    EXPECT_EQ(ts.totalCount.load(), 2);
+    EXPECT_EQ(ts.totalBytes.load(), 300);
+}
+
+TEST(TransferStats, AvgSpeedCalculation) {
+    TransferStats ts;
+    auto s = ts.recordStart(10000);
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(50));
+    ts.recordEnd(true, s);
+
+    int64_t durMs = ts.totalDurationMs.load();
+    int64_t bytes = ts.totalBytes.load();
+    ASSERT_GT(durMs, 0);
+    int64_t bps = bytes * 1000 / durMs;
+    EXPECT_GT(bps, 0);
+}
 
 /* ── FileTransferFactory ─────────────────────────────── */
 
