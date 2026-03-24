@@ -1,6 +1,7 @@
 #include "fw/Context.hpp"
 #include <gtest/gtest.h>
 #include <hv/HttpMessage.h>
+#include <memory>
 
 namespace alkaidlab {
 namespace fw {
@@ -347,6 +348,19 @@ TEST_F(ContextKV, ContentTypeByFilenameJson) {
     Context ctx(&req, &resp);
     ctx.setContentTypeByFilename("data.json");
     EXPECT_EQ(resp.content_type, APPLICATION_JSON);
+}
+
+// -- writerOwnership --
+
+TEST_F(ContextKV, WriterOwnershipNullForSyncHandler) {
+    Context ctx(&req, &resp);
+    std::shared_ptr<void> ownership = ctx.writerOwnership();
+    EXPECT_EQ(ownership, nullptr);
+}
+
+TEST_F(ContextKV, WriterOwnershipNullForTestBuilder) {
+    auto ctx = TestContextBuilder().method("GET").path("/test").build();
+    EXPECT_EQ(ctx.writerOwnership(), nullptr);
 }
 
 } // namespace fw

@@ -279,6 +279,14 @@ int Context::methodEnum() const {
     return static_cast<int>(m_impl->req->method);
 }
 
+/* -- Writer ownership -- */
+
+std::shared_ptr<void> Context::writerOwnership() const {
+    if (hasWriter())
+        return m_impl->httpCtx->writer;
+    return std::shared_ptr<void>();
+}
+
 /* ── Private constructor for TestContextBuilder ── */
 
 Context::Context(Impl* impl) : m_impl(impl) {}

@@ -9,6 +9,7 @@
 #include <string>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 
 namespace alkaidlab {
 namespace fw {
@@ -125,6 +126,13 @@ class Context {
 
     /** HTTP method enum value (libhv http_method) */
     int methodEnum() const;
+
+    /* -- Writer ownership (for async transfer strategies) -- */
+
+    /** Acquire shared ownership of the underlying writer.
+     *  The returned handle keeps the writer alive after Context is destroyed.
+     *  Returns empty shared_ptr if no writer is available (sync handler). */
+    std::shared_ptr<void> writerOwnership() const;
 
   private:
     Context(const Context&);

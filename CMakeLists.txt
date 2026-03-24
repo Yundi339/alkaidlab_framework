@@ -43,6 +43,10 @@ set(FW_SOURCES
     src/AtomicCounter.cpp
     src/FlowController.cpp
     src/SupervisedThreadPool.cpp
+    src/LegacyTransfer.cpp
+    src/AccelTransfer.cpp
+    src/StreamTransfer.cpp
+    src/FileTransferFactory.cpp
 )
 
 add_library(alkaidlab_fw STATIC ${FW_SOURCES})
