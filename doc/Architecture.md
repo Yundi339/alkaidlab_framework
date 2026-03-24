@@ -1,91 +1,72 @@
 # alkaidlab_fw 架构说明
 
-## 概述
+C++11 HTTP 服务端框架抽象层，解耦业务逻辑与 libhv。
 
-alkaidlab_fw 是轻量级 C++11 HTTP 服务端框架抽象层，将业务逻辑与底层 HTTP 库 (libhv) 解耦。
+## 模块分类
 
-## 模块结构
-
-```
-alkaidlab_fw/
-├── include/fw/
-│   ├── Application.hpp     # HTTP 服务器生命周期管理
-│   ├── Base64.hpp          # Base64 编解码
-│   ├── Context.hpp         # 请求/响应上下文
-│   ├── HttpConstants.hpp   # HTTP 状态码/方法常量
-│   ├── HvTransport.hpp     # libhv HTTP/1.1 传输实现
-│   ├── IniConfig.hpp       # INI 配置解析
-│   ├── LogConfig.hpp       # 日志配置
-│   ├── Middleware.hpp       # 洋葱模型中间件链
-│   ├── Router.hpp           # 统一路由注册
-│   └── ServerTransport.hpp  # 传输层抽象接口
-├── src/
-│   ├── Application.cpp
-│   ├── Base64.cpp
-│   ├── Context.cpp
-│   ├── HttpConstants.cpp
-│   ├── HvTransport.cpp
-│   ├── IniConfig.cpp
-│   ├── LogConfig.cpp
-│   ├── Middleware.cpp
-│   └── Router.cpp
-├── test/                    # 单元测试
-├── doc/                     # 框架文档
-├── build.sh                 # 独立构建脚本
-└── CMakeLists.txt           # 独立构建 + 安装 + 测试
-```
+| 分类 | 组件 | 头文件 |
+|------|------|--------|
+| **核心框架** | Application | fw/Application.hpp — 服务器生命周期（路由+中间件+SSL+异步） |
+| | Context | fw/Context.hpp — 请求/响应封装 + KV 数据传递（pimpl 隔离 libhv） |
+| | MiddlewareChain | fw/Middleware.hpp — 洋葱模型中间件链 |
+| | Router | fw/Router.hpp — 统一路由注册 + libhv 桥接 |
+| | HttpConstants | fw/HttpConstants.hpp — HTTP 状态码/方法枚举 |
+| **传输层** | ServerTransport | fw/ServerTransport.hpp — 传输抽象接口 |
+| | HvTransport | fw/HvTransport.hpp — libhv HTTP/1.1 传输实现 |
+| | HttpTransport | fw/HttpTransport.hpp — HTTP 客户端传输 |
+| | HttpsTransport | fw/HttpsTransport.hpp — HTTPS 客户端传输 |
+| | TcpTransport | fw/TcpTransport.hpp — TCP 传输 |
+| | WebSocketTransport | fw/WebSocketTransport.hpp — WebSocket 传输 |
+| | TransportFactory | fw/TransportFactory.hpp — 传输工厂 |
+| **无锁并发** | LockfreeQueue | fw/LockfreeQueue.hpp — MPMC 无锁队列（boost::lockfree） |
+| | SPSCQueue | fw/SPSCQueue.hpp — SPSC 单产单消队列 |
+| | AtomicCounter | fw/AtomicCounter.hpp — 原子计数器 |
+| | FlowController | fw/FlowController.hpp — 队列流控（防溢出+丢包统计） |
+| **线程池** | SupervisedThreadPool | fw/SupervisedThreadPool.hpp — 受监督线程池（worker 异常自动恢复） |
+| **工具** | Logger | fw/Logger.hpp — spdlog 封装（控制台+文件） |
+| | PathGuard | fw/PathGuard.hpp — 路径安全校验（系统目录黑名单） |
+| | JwtUtil | fw/JwtUtil.hpp — JWT HMAC-SHA256 |
+| | HashUtil | fw/HashUtil.hpp — SHA256/MD5 哈希 |
+| | PasswordUtil | fw/PasswordUtil.hpp — bcrypt 密码哈希 |
+| | IdUtil | fw/IdUtil.hpp — 雪花算法 ID |
+| | Base64 | fw/Base64.hpp — Base64 编解码 |
+| | JsonUtil | fw/JsonUtil.hpp — nlohmann::json 封装 |
+| | TimeUtil | fw/TimeUtil.hpp — 时间格式化/解析 |
+| | CertUtil | fw/CertUtil.hpp — SSL/TLS 证书工具 |
+| | IniConfig | fw/IniConfig.hpp — INI 配置解析（opaque pointer） |
+| | LogConfig | fw/LogConfig.hpp — 日志配置（文件/级别/轮转） |
 
 ## 依赖
 
-| 依赖 | 版本 | 用途 |
-|------|------|------|
-| libhv | ≥1.3 | HTTP 服务器核心 |
-| OpenSSL | ≥1.1 | HTTPS 支持 |
-| GTest | ≥1.13 | 单元测试（可选） |
+| 依赖 | 用途 |
+|------|------|
+| libhv | HTTP 服务器核心（git 子模块，build_cache/libhv_install/） |
+| Boost | thread/chrono/system/filesystem/random/uuid/lockfree |
+| OpenSSL | HTTPS + HMAC-SHA256 |
+| spdlog | 日志 |
+| nlohmann-json | JSON |
+| GTest | 测试（可选） |
 
 ## 构建
 
 ```bash
-# 独立构建（推荐）
-cd third_party/alkaidlab_fw
-bash build.sh                    # 构建并安装到 ../alkaidlab_fw_install
-bash build.sh --test             # 构建并运行测试
-bash build.sh --clean            # 清空后重新构建
-
-# 从项目根目录调用（代理脚本）
-bash build-fw.sh                 # 等价于上面的 build.sh
-
-# 手动 CMake 构建
-cmake -B build \
-    -DLIBHV_INCLUDE_DIR=/path/to/libhv/include \
-    -DLIBHV_LIB=/path/to/libhv.a \
-    -DCMAKE_INSTALL_PREFIX=../alkaidlab_fw_install
-cmake --build build
-cmake --install build
+bash build.sh                           # 构建+安装到上级 build_cache/alkaidlab_framework_install/
+bash build.sh --test                    # 构建+测试
+bash build.sh --clean                   # 清空重建
+bash build.sh --vcpkg-root /path/vcpkg  # 指定 vcpkg 根目录
+bash build.sh --install-dir /path       # 指定安装路径
 ```
+
+产物：`<install-dir>/lib/libalkaidlab_fw.a` + `<install-dir>/include/fw/` + `<install-dir>/lib/cmake/alkaidlab_fw/alkaidlab_fw-config.cmake`
 
 ## 设计决策
 
-### 1. Context 封装（非暴露 raw 指针）
+1. **pimpl 隔离**：Context.hpp 零 libhv `#include`，业务层无需接触 libhv 类型
+2. **KV 替代 X-Internal-\* Header**：中间件数据传递用 `set()`/`get()`，不污染 HTTP header
+3. **洋葱模型**：`int(Context&, Next)` 签名，`next()` 进入下层，不调用则中断
+4. **shared_ptr 共享中间件链**：Router::bind() 创建一份 chain 所有路由共享
+5. **C++11 兼容**：不使用 C++14/17 特性
 
-Context 提供完整的请求/响应访问方法，handler 层无需接触 `HttpRequest*`/`HttpResponse*`。
-好处：底层 HTTP 库替换时只需修改 Context 实现，业务代码零改动。
+## 单元测试
 
-### 2. KV 存储替代 X-Internal-* Header
-
-中间件间数据传递使用 `Context::set()`/`get()`，不污染 HTTP header。
-避免内部 header 泄露到客户端的安全风险。
-
-### 3. 洋葱模型中间件
-
-`MiddlewareChain` 支持前置/后置逻辑，中间件可通过不调用 `next()` 中断请求链。
-中间件签名统一为 `int(Context&, Next)`。
-
-### 4. Router + libhv 桥接
-
-`Router::bind(hv::HttpService&)` 将 fw 路由注册到 libhv 的路由系统，
-自动将 libhv 的 `HttpRequest*/HttpResponse*` 包装为 `Context`。
-
-## 版本历史
-
-- **v1.0.0** — 初始版本，从 FileStar `src/fw/` 提取为独立库
+20 个测试文件，覆盖核心框架（Context/Middleware/Router/Application） + 工具 + 无锁并发。
