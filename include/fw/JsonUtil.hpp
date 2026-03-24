@@ -11,10 +11,9 @@ class JsonUtil {
 public:
     using json = nlohmann::json;
 
-    static std::string getString(const std::string& body, const std::string& key,
+    static std::string getString(const json& j, const std::string& key,
                                  const std::string& defaultValue = "") {
         try {
-            json j = json::parse(body);
             if (j.contains(key)) {
                 const auto& v = j[key];
                 if (v.is_string()) {
@@ -31,9 +30,13 @@ public:
         return defaultValue;
     }
 
-    static int getInt(const std::string& body, const std::string& key, int defaultValue = 0) {
+    static std::string getString(const std::string& body, const std::string& key,
+                                 const std::string& defaultValue = "") {
+        return getString(safeParse(body), key, defaultValue);
+    }
+
+    static int getInt(const json& j, const std::string& key, int defaultValue = 0) {
         try {
-            json j = json::parse(body);
             if (j.contains(key) && j[key].is_number_integer()) {
                 return j[key].get<int>();
             }
@@ -41,9 +44,12 @@ public:
         return defaultValue;
     }
 
-    static bool getBool(const std::string& body, const std::string& key, bool defaultValue = false) {
+    static int getInt(const std::string& body, const std::string& key, int defaultValue = 0) {
+        return getInt(safeParse(body), key, defaultValue);
+    }
+
+    static bool getBool(const json& j, const std::string& key, bool defaultValue = false) {
         try {
-            json j = json::parse(body);
             if (j.contains(key)) {
                 const auto& v = j[key];
                 if (v.is_boolean()) {
@@ -59,6 +65,22 @@ public:
             }
         } catch (...) {}
         return defaultValue;
+    }
+
+    static bool getBool(const std::string& body, const std::string& key, bool defaultValue = false) {
+        return getBool(safeParse(body), key, defaultValue);
+    }
+
+    // const char* 消歧义（避免 string vs json 隐式转换冲突）
+    static std::string getString(const char* body, const std::string& key,
+                                 const std::string& defaultValue = "") {
+        return getString(safeParse(std::string(body)), key, defaultValue);
+    }
+    static int getInt(const char* body, const std::string& key, int defaultValue = 0) {
+        return getInt(safeParse(std::string(body)), key, defaultValue);
+    }
+    static bool getBool(const char* body, const std::string& key, bool defaultValue = false) {
+        return getBool(safeParse(std::string(body)), key, defaultValue);
     }
 
     static json safeParse(const std::string& body) {
