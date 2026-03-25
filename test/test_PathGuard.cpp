@@ -60,11 +60,11 @@ TEST(PathGuard, RejectsShallowAbsolute) {
 
 TEST(PathGuard, AcceptsDeepAbsolute) {
     std::string r;
-    EXPECT_TRUE(PathGuard::isSafe("/opt/filestar", r));
-    EXPECT_TRUE(PathGuard::isSafe("/opt/filestar/data", r));
+    EXPECT_TRUE(PathGuard::isSafe("/opt/intertwine", r));
+    EXPECT_TRUE(PathGuard::isSafe("/opt/intertwine/data", r));
     EXPECT_TRUE(PathGuard::isSafe("/home/user/uploads", r));
-    EXPECT_TRUE(PathGuard::isSafe("/tmp/filestar_data", r));
-    EXPECT_TRUE(PathGuard::isSafe("/var/filestar", r));
+    EXPECT_TRUE(PathGuard::isSafe("/tmp/intertwine_data", r));
+    EXPECT_TRUE(PathGuard::isSafe("/var/intertwine", r));
 }
 
 TEST(PathGuard, AcceptsRelativePath) {

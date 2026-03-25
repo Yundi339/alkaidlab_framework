@@ -9,8 +9,8 @@ namespace alkaidlab {
 namespace fw {
 
 static std::string writeTempFile(const std::string& content) {
-    boost::filesystem::create_directories("/tmp/alkaidlab_filestar_tmp");
-    boost::filesystem::path model("/tmp/alkaidlab_filestar_tmp/hash_%%%%-%%%%");
+    boost::filesystem::create_directories("/tmp/alkaidlab_intertwine_tmp");
+    boost::filesystem::path model("/tmp/alkaidlab_intertwine_tmp/hash_%%%%-%%%%");
     boost::filesystem::path p = boost::filesystem::unique_path(model);
     std::ofstream ofs(p.string(), std::ios::binary);
     if (!ofs) return "";

@@ -66,7 +66,7 @@ bool CertUtil::generateSelfSigned(const std::string& certPath,
         X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_UTF8,
                                    reinterpret_cast<const unsigned char*>(cn.c_str()), -1, -1, 0);
         X509_NAME_add_entry_by_txt(name, "O", MBSTRING_UTF8,
-                                   reinterpret_cast<const unsigned char*>("FileStar"), -1, -1, 0);
+                                   reinterpret_cast<const unsigned char*>("AlkaidLab"), -1, -1, 0);
         X509_set_issuer_name(x509, name);
     }
 

@@ -125,7 +125,7 @@ TEST(RouterTest, ErrorHandlerBinds) {
 TEST(RouterTest, MigratedPingHandler) {
     Router router;
     router.get("/api/ping", [](Context& ctx) {
-        ctx.json(200, "{\"service\":\"filestar\",\"status\":\"ok\"}");
+        ctx.json(200, "{\"service\":\"intertwine\",\"status\":\"ok\"}");
     });
     hv::HttpService service;
     router.bind(service);
@@ -140,7 +140,7 @@ TEST(RouterTest, MigratedPingHandler) {
     ASSERT_TRUE(h != NULL);
     h->sync_handler(&req, &resp);
     EXPECT_EQ(resp.status_code, 200);
-    EXPECT_EQ(resp.body, "{\"service\":\"filestar\",\"status\":\"ok\"}");
+    EXPECT_EQ(resp.body, "{\"service\":\"AlakaidLab Intertwine\",\"status\":\"ok\"}");
     EXPECT_EQ(resp.content_type, APPLICATION_JSON);
 }
 
