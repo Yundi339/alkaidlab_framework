@@ -140,7 +140,7 @@ TEST(RouterTest, MigratedPingHandler) {
     ASSERT_TRUE(h != NULL);
     h->sync_handler(&req, &resp);
     EXPECT_EQ(resp.status_code, 200);
-    EXPECT_EQ(resp.body, "{\"service\":\"AlakaidLab Intertwine\",\"status\":\"ok\"}");
+    EXPECT_EQ(resp.body, "{\"service\":\"intertwine\",\"status\":\"ok\"}");
     EXPECT_EQ(resp.content_type, APPLICATION_JSON);
 }
 
