@@ -70,13 +70,34 @@ bool CertUtil::generateSelfSigned(const std::string& certPath,
         X509_set_issuer_name(x509, name);
     }
 
-    /* 添加 SAN (Subject Alternative Name) 扩展：localhost + 通配 */
+    /* 添加 SAN (Subject Alternative Name) 扩展 */
     {
         X509V3_CTX v3ctx;
         X509V3_set_ctx_nodb(&v3ctx);
         X509V3_set_ctx(&v3ctx, x509, x509, nullptr, nullptr, 0);
+
+        /* 组装 SAN：localhost + 回环 IP，如果 CN 像域名则一并加入 */
+        std::string san = "DNS:localhost,IP:127.0.0.1,IP:::1";
+        if (!cn.empty() && cn != "localhost") {
+            bool hasDot = (cn.find('.') != std::string::npos);
+            bool hasColon = (cn.find(':') != std::string::npos);
+            if (hasColon) {
+                /* IPv6 地址 */
+                san = "IP:" + cn + "," + san;
+            } else if (hasDot) {
+                /* 域名或 IPv4 */
+                /* 简单判断：全是数字和点 → IP，否则域名 */
+                bool isIp = true;
+                for (std::string::size_type i = 0; i < cn.size(); ++i) {
+                    char ch = cn[i];
+                    if (ch != '.' && (ch < '0' || ch > '9')) { isIp = false; break; }
+                }
+                san = (isIp ? "IP:" : "DNS:") + cn + "," + san;
+            }
+        }
+
         X509_EXTENSION* ext = X509V3_EXT_conf_nid(nullptr, &v3ctx, NID_subject_alt_name,
-                                                   const_cast<char*>("DNS:localhost,DNS:*,IP:127.0.0.1,IP:::1"));
+                                                   const_cast<char*>(san.c_str()));
         if (ext) {
             X509_add_ext(x509, ext, -1);
             X509_EXTENSION_free(ext);
