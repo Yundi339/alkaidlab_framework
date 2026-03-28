@@ -5,6 +5,20 @@
 namespace alkaidlab {
 namespace fw {
 
+static std::string safeFilenameForHeader(const std::string& name) {
+    std::string safe;
+    safe.reserve(name.size());
+    for (size_t i = 0; i < name.size(); ++i) {
+        char ch = name[i];
+        if (ch >= 0x20 && ch < 0x7F && ch != '"' && ch != '\\') {
+            safe += ch;
+        } else {
+            safe += '_';
+        }
+    }
+    return safe;
+}
+
 AccelTransfer::AccelTransfer(const std::string& prefix)
     : m_prefix(prefix) {}
 
@@ -20,7 +34,7 @@ void AccelTransfer::send(Context& c, const TransferParams& params) {
     c.setHeader("X-Accel-Redirect", m_prefix + fileId);
     c.setContentTypeByFilename(params.displayName.c_str());
     c.setHeader("Content-Disposition",
-                "attachment; filename=\"" + params.displayName + "\"");
+                "attachment; filename=\"" + safeFilenameForHeader(params.displayName) + "\"");
     c.setStatus(HttpStatus::Ok);
     c.setBody("");
 

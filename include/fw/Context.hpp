@@ -134,9 +134,8 @@ class Context {
      *  Returns empty shared_ptr if no writer is available (sync handler). */
     std::shared_ptr<void> writerOwnership() const;
 
-  private:
-    Context(const Context&);
-    Context& operator=(const Context&);
+    Context(const Context&) = delete;
+    Context& operator=(const Context&) = delete;
 
   public:
     /** Move constructor (pimpl transfer). */

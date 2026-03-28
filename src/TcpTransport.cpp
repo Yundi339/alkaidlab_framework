@@ -305,6 +305,13 @@ int TcpTransport::sendRequest(const Request& req, Response& resp) {
     try {
         // 构造数据包（使用头部长度字段格式）
         // 格式：4字节长度（网络字节序）+ 数据
+        // Guard against body size exceeding uint32 range (CWE-190)
+        if (req.body.size() > 0xFFFFFFFBu) { // max uint32 - 4
+            resp.statusCode = -1;
+            resp.errorMessage = "Body too large for TCP frame";
+            LOG_ERROR("TcpTransport::sendRequest: Body size exceeds uint32 limit");
+            return -1;
+        }
         uint32_t dataLen = static_cast<uint32_t>(req.body.size());
         uint32_t totalLen = htonl(dataLen + 4);  // 总长度包含4字节长度字段
         

@@ -93,7 +93,22 @@ int Context::status() const {
 }
 
 void Context::setHeader(const char* key, const std::string& val) {
-    m_impl->resp->SetHeader(key, val);
+    // Strip CR/LF to prevent HTTP header injection (CWE-113)
+    bool hasCrlf = false;
+    for (std::string::size_type i = 0; i < val.size(); ++i) {
+        if (val[i] == '\r' || val[i] == '\n') { hasCrlf = true; break; }
+    }
+    if (hasCrlf) {
+        std::string safe;
+        safe.reserve(val.size());
+        for (std::string::size_type i = 0; i < val.size(); ++i) {
+            if (val[i] != '\r' && val[i] != '\n')
+                safe += val[i];
+        }
+        m_impl->resp->SetHeader(key, safe);
+    } else {
+        m_impl->resp->SetHeader(key, val);
+    }
 }
 
 std::string Context::responseHeader(const char* key) const {
@@ -113,6 +128,16 @@ void Context::setContentTypeByFilename(const char* filename) {
 }
 
 void Context::serveFile(const char* filepath) {
+    // Reject path traversal sequences (CWE-22)
+    if (filepath) {
+        for (const char* p = filepath; *p; ++p) {
+            if (p[0] == '.' && p[1] == '.') {
+                m_impl->resp->status_code = HTTP_STATUS_FORBIDDEN;
+                m_impl->resp->body = "{\"error\":\"Forbidden\"}";
+                return;
+            }
+        }
+    }
     m_impl->resp->File(filepath);
 }
 
@@ -154,8 +179,22 @@ void Context::writeStatus(int code) {
 }
 
 void Context::writeHeader(const char* key, const char* val) {
-    if (hasWriter())
+    if (!hasWriter()) return;
+    // Strip CR/LF to prevent HTTP header injection (CWE-113)
+    bool hasCrlf = false;
+    for (const char* p = val; *p; ++p) {
+        if (*p == '\r' || *p == '\n') { hasCrlf = true; break; }
+    }
+    if (hasCrlf) {
+        std::string safe;
+        for (const char* p = val; *p; ++p) {
+            if (*p != '\r' && *p != '\n')
+                safe += *p;
+        }
+        m_impl->httpCtx->writer->WriteHeader(key, safe.c_str());
+    } else {
         m_impl->httpCtx->writer->WriteHeader(key, val);
+    }
 }
 
 int Context::endHeaders(const char* key, int64_t contentLength) {

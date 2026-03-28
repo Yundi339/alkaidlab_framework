@@ -101,8 +101,8 @@ public:
     void cleanupAsync();
 
 private:
-    Application(const Application&);
-    Application& operator=(const Application&);
+    Application(const Application&) = delete;
+    Application& operator=(const Application&) = delete;
 
     struct Impl;
     Impl* m_impl;
