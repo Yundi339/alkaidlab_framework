@@ -69,6 +69,7 @@ void finish(std::shared_ptr<TransferState>& s, bool success) {
 
 /** onwrite 回调：EPOLLOUT 触发时读取下一块并发送 */
 void pump(std::shared_ptr<TransferState> s) {
+    if (s->finished) { return; }             // 防止 finish 后重入
     if (!s->writer->isConnected()) {
         finish(s, false);
         return;
@@ -85,12 +86,22 @@ void pump(std::shared_ptr<TransferState> s) {
         return;
     }
 
+    // 先扣减 remaining，再写数据。
+    // WriteBody 可能同步触发 on_write → 重入 pump()；
+    // 如果 remaining 在 WriteBody 之后才扣减，
+    // 重入的 pump 看到旧 remaining → 读到 EOF → finish(false)。
+    s->remaining -= got;
+
+    if (s->remaining <= 0) {
+        // 最后一块：清除 onwrite 防止 WriteBody 的同步回调重入
+        s->writer->onwrite = nullptr;
+    }
+
     int ret = s->writer->WriteBody(buf, static_cast<int>(got));
     if (ret < 0) {
         finish(s, false);
         return;
     }
-    s->remaining -= got;
 
     if (s->remaining <= 0) {
         s->writer->End();
