@@ -91,13 +91,13 @@ TEST(FileTransferFactory, LegacyMode) {
 TEST(FileTransferFactory, AutoMode) {
     auto t = FileTransferFactory::create("auto");
     ASSERT_NE(t, nullptr);
-    EXPECT_STREQ(t->name(), "legacy");
+    EXPECT_STREQ(t->name(), "stream");
 }
 
 TEST(FileTransferFactory, EmptyMode) {
     auto t = FileTransferFactory::create("");
     ASSERT_NE(t, nullptr);
-    EXPECT_STREQ(t->name(), "legacy");
+    EXPECT_STREQ(t->name(), "stream");
 }
 
 TEST(FileTransferFactory, StreamMode) {
