@@ -224,5 +224,132 @@ TEST(Application, FullConfigurationScenario) {
     EXPECT_EQ(app.workerThreadsCount(), 2);
 }
 
+/* ── S1: mountStatic ── */
+
+TEST(Application, MountStatic) {
+    Application app;
+    app.mountStatic("/downloads/", "/tmp/downloads");
+    // 不崩溃即可
+}
+
+TEST(Application, MountStaticMultiple) {
+    Application app;
+    app.mountStatic("/assets/", "/var/www/assets");
+    app.mountStatic("/media/", "/var/www/media");
+}
+
+/* ── S2: proxy ── */
+
+TEST(Application, Proxy) {
+    Application app;
+    app.proxy("/api/v2/", "http://backend:8080/");
+}
+
+TEST(Application, ProxyMultiple) {
+    Application app;
+    app.proxy("/api/", "http://127.0.0.1:8080/");
+    app.proxy("/legacy/", "http://old-server:3000/");
+}
+
+TEST(Application, SetProxyTimeout) {
+    Application app;
+    app.setProxyTimeout(3000, 60000, 30000);
+}
+
+/* ── S3: keepalive / limitRate ── */
+
+TEST(Application, SetKeepaliveTimeout) {
+    Application app;
+    app.setKeepaliveTimeout(30000);
+}
+
+TEST(Application, SetLimitRate) {
+    Application app;
+    app.setLimitRate(1024); // 1MB/s
+}
+
+TEST(Application, SetLimitRateUnlimited) {
+    Application app;
+    app.setLimitRate(-1);
+}
+
+/* ── S4: serverName ── */
+
+TEST(Application, ServerNameEmpty) {
+    Application app;
+    app.setServerName("");
+    EXPECT_TRUE(app.serverNames().empty());
+    EXPECT_TRUE(app.isAllowedHost("anything.com"));
+}
+
+TEST(Application, ServerNameSingle) {
+    Application app;
+    app.setServerName("example.com");
+    EXPECT_EQ(app.serverNames().size(), 1u);
+    EXPECT_TRUE(app.isAllowedHost("example.com"));
+    EXPECT_TRUE(app.isAllowedHost("Example.COM"));
+    EXPECT_TRUE(app.isAllowedHost("example.com:9339"));
+    EXPECT_FALSE(app.isAllowedHost("evil.com"));
+}
+
+TEST(Application, ServerNameMultiple) {
+    Application app;
+    app.setServerName("a.com, b.com, c.com");
+    EXPECT_EQ(app.serverNames().size(), 3u);
+    EXPECT_TRUE(app.isAllowedHost("a.com"));
+    EXPECT_TRUE(app.isAllowedHost("b.com"));
+    EXPECT_TRUE(app.isAllowedHost("c.com"));
+    EXPECT_FALSE(app.isAllowedHost("d.com"));
+}
+
+TEST(Application, ServerNameCaseInsensitive) {
+    Application app;
+    app.setServerName("Files.Example.COM");
+    EXPECT_TRUE(app.isAllowedHost("files.example.com"));
+    EXPECT_TRUE(app.isAllowedHost("FILES.EXAMPLE.COM"));
+}
+
+TEST(Application, ServerNameStripPort) {
+    Application app;
+    app.setServerName("myhost.lan");
+    EXPECT_TRUE(app.isAllowedHost("myhost.lan:443"));
+    EXPECT_TRUE(app.isAllowedHost("myhost.lan:9339"));
+    EXPECT_FALSE(app.isAllowedHost("other.lan:9339"));
+}
+
+TEST(Application, ServerNameTrimWhitespace) {
+    Application app;
+    app.setServerName("  a.com , b.com  ,  c.com  ");
+    EXPECT_EQ(app.serverNames().size(), 3u);
+    EXPECT_TRUE(app.isAllowedHost("a.com"));
+    EXPECT_TRUE(app.isAllowedHost("b.com"));
+    EXPECT_TRUE(app.isAllowedHost("c.com"));
+}
+
+TEST(Application, ServerNameOverwrite) {
+    Application app;
+    app.setServerName("old.com");
+    EXPECT_TRUE(app.isAllowedHost("old.com"));
+    app.setServerName("new.com");
+    EXPECT_FALSE(app.isAllowedHost("old.com"));
+    EXPECT_TRUE(app.isAllowedHost("new.com"));
+}
+
+TEST(Application, ServerNameClearByEmpty) {
+    Application app;
+    app.setServerName("example.com");
+    EXPECT_FALSE(app.isAllowedHost("other.com"));
+    app.setServerName("");
+    EXPECT_TRUE(app.isAllowedHost("other.com")); // 空 = 接受所有
+}
+
+TEST(Application, ServerNameSkipEmptyTokens) {
+    Application app;
+    app.setServerName(",, a.com ,,, b.com ,,");
+    EXPECT_EQ(app.serverNames().size(), 2u);
+    EXPECT_TRUE(app.isAllowedHost("a.com"));
+    EXPECT_TRUE(app.isAllowedHost("b.com"));
+}
+
 } // namespace fw
 } // namespace alkaidlab

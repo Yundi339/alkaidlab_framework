@@ -28,6 +28,7 @@
  */
 
 #include <functional>
+#include <set>
 #include <string>
 
 namespace alkaidlab {
@@ -63,6 +64,11 @@ public:
 
     void setDocumentRoot(const std::string& path);
 
+    /** Mount a static directory at the given URL prefix.
+     *  e.g. mountStatic("/downloads/", "data/uploads/public/")
+     *  Equivalent to nginx: location /downloads/ { root data/uploads/public/; } */
+    void mountStatic(const std::string& urlPrefix, const std::string& dir);
+
     /* -- Route mounting -- */
 
     /** Mount a Router's routes + route-level middleware into this application. */
@@ -74,6 +80,31 @@ public:
     void setPort(int port);
     void setHttpsPort(int port);
     void setWorkerThreads(int n);
+
+    /** Set keepalive timeout in milliseconds. Default: 75000ms. */
+    void setKeepaliveTimeout(int ms);
+
+    /** Set send rate limit in KB/s. -1 = unlimited (default). */
+    void setLimitRate(int kbps);
+
+    /** Set reverse proxy: requests matching urlPrefix are forwarded to targetUrl.
+     *  e.g. proxy("/api/v2/", "http://backend:8080/")
+     *  Equivalent to nginx: location /api/v2/ { proxy_pass http://backend:8080/; } */
+    void proxy(const std::string& urlPrefix, const std::string& targetUrl);
+
+    /** Set proxy timeouts in milliseconds. */
+    void setProxyTimeout(int connectMs, int readMs, int writeMs);
+
+    /** Set allowed server names (comma-separated, case-insensitive).
+     *  Empty string = accept all hosts. */
+    void setServerName(const std::string& names);
+
+    /** Get the current set of allowed server names (lowercase). */
+    const std::set<std::string>& serverNames() const;
+
+    /** Check if a Host header value matches the configured server_name list.
+     *  Always returns true if server_name is not configured (empty). */
+    bool isAllowedHost(const std::string& hostHeader) const;
 
     /** Enable HTTPS with cert/key PEM files. Returns false on failure. */
     bool enableSsl(const std::string& certFile, const std::string& keyFile);
